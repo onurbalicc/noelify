@@ -40,6 +40,25 @@ jobs:
           else
             wait "$PID"; echo "Noelify exited early with status $?"; exit 1
           fi
+      - name: Snow engine checks (real window server)
+        run: |
+          build/Noelify.app/Contents/MacOS/Noelify --snow-diagnostics "$RUNNER_TEMP/snow" --checks-only --power battery &
+          PID=$!
+          # Let the overlay settle, then record what the window server actually composites.
+          sleep 12
+          screencapture -x "$RUNNER_TEMP/snow-desktop.png" || echo "::warning::screencapture unavailable"
+          for _ in $(seq 120); do kill -0 "$PID" 2>/dev/null || break; sleep 1; done
+          if kill -0 "$PID" 2>/dev/null; then echo "timed out"; kill "$PID"; exit 1; fi
+          wait "$PID"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snow-diagnostics
+          path: |
+            ${{ runner.temp }}/snow
+            ${{ runner.temp }}/snow-desktop.png
+          if-no-files-found: ignore
+          retention-days: 3
       - name: Zip app (preserves bundle structure and signature)
         run: ditto -c -k --keepParent build/Noelify.app build/Noelify.zip
       - uses: actions/upload-artifact@v4
