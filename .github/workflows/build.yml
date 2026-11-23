@@ -49,8 +49,10 @@ jobs:
           # snow, and two after Noelify has quit.
           shot() { screencapture -x -t bmp "$RUNNER_TEMP/$1.bmp"; }
           shot before
-          for i in $(seq 100 220); do shot "burst$i"; done
-          # The snow variants run for another minute from here.
+          i=100; SECONDS=0
+          while (( SECONDS < 48 )); do shot "burst$i"; i=$((i + 1)); done
+          # Steady snow (style and size variants) runs for the better part of a minute from here.
+          sleep 16
           shot snow1; sleep 1; shot snow2
           for _ in $(seq 120); do kill -0 "$PID" 2>/dev/null || break; sleep 1; done
           if kill -0 "$PID" 2>/dev/null; then echo "timed out"; kill "$PID"; exit 1; fi

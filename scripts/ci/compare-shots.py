@@ -36,6 +36,6 @@ if moving < 0.0005 or moving < still * 3:
 worst, name = max(
     (changed_fraction("before", shot.stem), shot.stem) for shot in sorted(folder.glob("burst*.bmp"))
 )
-print(f"largest change during on/off cycles: {worst:.2%} ({name})")
+print(f"{len(list(folder.glob('burst*.bmp')))} burst shots; largest change during on/off cycles: {worst:.2%} ({name})")
 if worst > 0.25:
     sys.exit("the screen flashed while snow was turned on and off")
