@@ -44,12 +44,17 @@ jobs:
         run: |
           build/Noelify.app/Contents/MacOS/Noelify --snow-diagnostics "$RUNNER_TEMP/snow" --checks-only --power battery &
           PID=$!
-          # Let the overlay settle, then record what the window server actually composites.
-          sleep 12
-          screencapture -x "$RUNNER_TEMP/snow-desktop.png" || echo "::warning::screencapture unavailable"
+          # Let the overlay settle, then record what the window server really composites:
+          # two shots a second apart with snow, two after Noelify has quit.
+          sleep 14
+          shot() { screencapture -x -t bmp "$RUNNER_TEMP/$1.bmp"; }
+          shot snow1; sleep 1; shot snow2
           for _ in $(seq 120); do kill -0 "$PID" 2>/dev/null || break; sleep 1; done
           if kill -0 "$PID" 2>/dev/null; then echo "timed out"; kill "$PID"; exit 1; fi
           wait "$PID"
+          sleep 1; shot quiet1; sleep 1; shot quiet2
+          python3 scripts/ci/compare-shots.py "$RUNNER_TEMP"
+          sips -s format png "$RUNNER_TEMP/snow1.bmp" --out "$RUNNER_TEMP/snow-desktop.png" >/dev/null
       - uses: actions/upload-artifact@v4
         if: always()
         with:
