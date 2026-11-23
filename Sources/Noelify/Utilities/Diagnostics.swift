@@ -94,6 +94,7 @@ private final class DiagnosticsRun {
         if runsBenchmark { await benchmark() }
         if runsChecks {
             await checkToggling()
+            await checkRenderLoop()
             await checkOverlay()
             await checkSettings()
             await checkRendering()
@@ -125,12 +126,39 @@ private final class DiagnosticsRun {
         check("turning on twice keeps one overlay per display", snowWindowCount == NSScreen.screens.count)
     }
 
+    private func checkRenderLoop() async {
+        var stuck: [String] = []
+        for i in 0..<25 {
+            model.setChristmasMode(false)
+            await pause(i % 2 == 0 ? 0 : 0.1)
+            model.setChristmasMode(true)
+            await pause(1)
+            if let overlay = model.snowOverlays.first, overlay.frameCount < 5 {
+                stuck.append("cycle \(i): \(overlay.frameCount) frames, \(overlay.stateDescription)")
+            }
+        }
+        check("the render loop starts every time in 25 restarts", stuck.isEmpty, stuck.joined(separator: "; "))
+
+        guard let overlay = model.snowOverlays.first else { return }
+        overlay.panel.orderOut(nil)
+        await pause(1)
+        let hidden = overlay.frameCount
+        await pause(1)
+        check("rendering stops while the overlay can't be seen", overlay.frameCount - hidden <= 1,
+              "\(overlay.frameCount - hidden) frames, \(overlay.stateDescription)")
+        overlay.panel.orderFrontRegardless()
+        await pause(1.5)
+        check("rendering resumes when it can be seen again", overlay.frameCount - hidden > 5,
+              "\(overlay.frameCount - hidden) frames, \(overlay.stateDescription)")
+    }
+
     private func checkOverlay() async {
         model.setChristmasMode(true)
         await pause(2.5)
         guard let overlay = model.snowOverlays.first else { return check("overlay exists", false) }
         let panel = overlay.panel
         check("overlay is visible", panel.isVisible && panel.occlusionState.contains(.visible))
+        check("snow was revealed after warming up", overlay.isRevealed)
         check("overlay covers the whole display", NSScreen.screens.contains { $0.frame == panel.frame })
         check("snow fills the panel",
               overlay.drawnRect.insetBy(dx: -1, dy: -1).contains(NSRect(origin: .zero, size: panel.frame.size)),
@@ -246,7 +274,8 @@ private final class DiagnosticsRun {
         let fps = overlay.map { Double($0.frameCount - frames) / elapsed } ?? 0
         log(String(format: "%@ · CPU %.1f%% of one core · memory %.0f MB · %.1f fps · %d flakes",
                    ("perf  " + name).padding(toLength: 36, withPad: " ", startingAt: 0),
-                   cpuPercent, Self.footprintMB(), fps, overlay?.flakeCount ?? 0))
+                   cpuPercent, Self.footprintMB(), fps, overlay?.flakeCount ?? 0)
+            + (overlay.map { $0.isRendering ? "" : " · PAUSED (\($0.stateDescription))" } ?? ""))
     }
 
     private static func cpuSeconds() -> Double {

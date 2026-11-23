@@ -9,6 +9,9 @@ final class SnowScene: SKScene {
     /// Frames simulated since the scene was created (used by diagnostics).
     private(set) var frameCount = 0
 
+    /// Called after each frame's update while set (only during warm-up).
+    var onFrame: (() -> Void)?
+
     private var sprites: [SKSpriteNode] = []
     private var textures: SnowTextures
     private var boundGeneration = -1
@@ -49,6 +52,7 @@ final class SnowScene: SKScene {
         field.step(elapsed)
         bindSprites()
         place()
+        onFrame?()
     }
 
     // MARK: - Private

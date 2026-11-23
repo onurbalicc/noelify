@@ -77,10 +77,17 @@ final class SnowOverlayWindow {
     private let scene: SnowScene
     private var occlusionObserver: NSObjectProtocol?
     private var isSuspended = false
+    private static let warmUpFrames = 4
+    private var framesUntilReveal = SnowOverlayWindow.warmUpFrames
 
+    /// The snow is fully shown (not still warming up).
+    var isRevealed: Bool { container.alphaValue == 1 }
     var frameCount: Int { scene.frameCount }
     var flakeCount: Int { scene.field.flakes.count }
     var isRendering: Bool { !view.isPaused }
+    var stateDescription: String {
+        "paused \(view.isPaused), suspended \(isSuspended), visible \(panel.occlusionState.contains(.visible)), scene paused \(scene.isPaused)"
+    }
     /// Where the snow ends up inside the panel, as Core Animation sees it.
     var drawnRect: CGRect {
         guard let snow = view.layer, let root = container.layer else { return .null }
@@ -102,20 +109,26 @@ final class SnowOverlayWindow {
         container.usesNearest = configuration.settings.style == .pixel
         view.preferredFramesPerSecond = configuration.framesPerSecond
         scene = SnowScene(size: screen.frame.size, configuration: configuration)
-        view.presentScene(scene)
         panel.contentView = container
+        // Nothing SpriteKit draws while it warms up may reach the screen.
+        container.alphaValue = 0
+        scene.onFrame = { [weak self] in self?.revealWhenReady() }
 
         occlusionObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didChangeOcclusionStateNotification, object: panel, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.updatePaused() }
         }
+        // The panel isn't reported visible until the window server has seen it, so start
+        // unpaused and let occlusion changes pause rendering from here on.
         panel.orderFrontRegardless()
-        updatePaused()
+        // Presented last so SpriteKit ties its display link to the display the panel is on.
+        view.presentScene(scene)
     }
 
     func apply(_ configuration: SnowRenderConfiguration) {
         view.preferredFramesPerSecond = configuration.framesPerSecond
+        if container.renderScale != configuration.renderScale { hideUntilReady() }
         container.renderScale = configuration.renderScale
         container.usesNearest = configuration.settings.style == .pixel
         scene.apply(configuration)
@@ -123,6 +136,7 @@ final class SnowOverlayWindow {
 
     func move(to screen: NSScreen) {
         guard panel.frame != screen.frame else { return }
+        hideUntilReady()
         panel.setFrame(screen.frame, display: true)
         scene.size = screen.frame.size
     }
@@ -136,15 +150,36 @@ final class SnowOverlayWindow {
     func close() {
         if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
         occlusionObserver = nil
+        scene.onFrame = nil
+        // Off screen first: a view losing its scene may draw one opaque frame.
+        container.alphaValue = 0
+        panel.orderOut(nil)
         view.isPaused = true
         scene.removeAllChildren()
         view.presentScene(nil)
         panel.contentView = nil
-        panel.orderOut(nil)
         panel.close()
     }
 
-    private func updatePaused() {
+    private func hideUntilReady() {
+        container.alphaValue = 0
+        framesUntilReveal = Self.warmUpFrames
+        scene.onFrame = { [weak self] in self?.revealWhenReady() }
+    }
+
+    /// Fades the snow in once a few complete frames have been drawn.
+    private func revealWhenReady() {
+        framesUntilReveal -= 1
+        guard framesUntilReveal <= 0 else { return }
+        scene.onFrame = nil
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.4
+            container.animator().alphaValue = 1
+        }
+    }
+
+    /// Re-reads the current state, in case a change arrived without a notification.
+    func updatePaused() {
         let paused = isSuspended || !panel.occlusionState.contains(.visible)
         if view.isPaused != paused { view.isPaused = paused }
     }

@@ -9,18 +9,24 @@ final class SnowOverlayController {
     private var configuration: SnowRenderConfiguration?
     private var observers: [(center: NotificationCenter, token: NSObjectProtocol)] = []
     private var isSuspended = false
+    private var healthCheck: DispatchWorkItem?
+    private var rebuildsLeft = 0
 
     func show(_ configuration: SnowRenderConfiguration) {
         self.configuration = configuration
         if observers.isEmpty { observeSystem() }
         for overlay in overlays.values { overlay.apply(configuration) }
+        rebuildsLeft = 3
         matchScreens()
+        scheduleHealthCheck()
     }
 
     func hide() {
         configuration = nil
         for observer in observers { observer.center.removeObserver(observer.token) }
         observers.removeAll()
+        healthCheck?.cancel()
+        healthCheck = nil
         isSuspended = false
         for overlay in overlays.values { overlay.close() }
         overlays.removeAll()
@@ -50,6 +56,38 @@ final class SnowOverlayController {
     private func setSuspended(_ suspended: Bool) {
         isSuspended = suspended
         for overlay in overlays.values { overlay.setSuspended(suspended) }
+        if !suspended { scheduleHealthCheck() }
+    }
+
+    /// Once, shortly after snow starts or the Mac wakes, makes sure frames are really being
+    /// produced, and replaces an overlay whose display link never started. Not a timer:
+    /// nothing is scheduled again unless an overlay had to be replaced.
+    private func scheduleHealthCheck() {
+        healthCheck?.cancel()
+        let before = overlays.mapValues(\.frameCount)
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated { self?.checkHealth(framesBefore: before) }
+        }
+        healthCheck = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: work)
+    }
+
+    private func checkHealth(framesBefore: [CGDirectDisplayID: Int]) {
+        healthCheck = nil
+        var replaced = false
+        for (id, overlay) in overlays {
+            overlay.updatePaused()
+            guard overlay.isRendering, overlay.frameCount == framesBefore[id], rebuildsLeft > 0 else { continue }
+            NSLog("Noelify: snow was not rendering (\(overlay.stateDescription)); replacing the overlay")
+            rebuildsLeft -= 1
+            overlay.close()
+            overlays[id] = nil
+            replaced = true
+        }
+        if replaced {
+            matchScreens()
+            scheduleHealthCheck()
+        }
     }
 
     private func observeSystem() {
@@ -59,6 +97,9 @@ final class SnowOverlayController {
         observe(workspace, NSWorkspace.screensDidWakeNotification) { $0.setSuspended(false) }
         observe(workspace, NSWorkspace.sessionDidResignActiveNotification) { $0.setSuspended(true) }
         observe(workspace, NSWorkspace.sessionDidBecomeActiveNotification) { $0.setSuspended(false) }
+        observe(workspace, NSWorkspace.activeSpaceDidChangeNotification) { controller in
+            for overlay in controller.overlays.values { overlay.updatePaused() }
+        }
     }
 
     private func observe(_ center: NotificationCenter, _ name: Notification.Name,
