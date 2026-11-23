@@ -77,12 +77,21 @@ final class SnowRenderConfigurationTests: XCTestCase {
     }
 
     func testBatteryReducesWork() {
-        let ac = config(power: .pluggedIn), battery = config(power: .battery), low = config(power: .constrained)
+        let ac = config(.blizzard, power: .pluggedIn), battery = config(.blizzard, power: .battery)
+        let low = config(.blizzard, power: .constrained)
         let counts = [low, battery, ac].map { $0.flakeCount(width: 1440, height: 900) }
         XCTAssertTrue(counts[0] < counts[1] && counts[1] < counts[2])
         XCTAssertTrue(low.framesPerSecond < battery.framesPerSecond)
         XCTAssertTrue(battery.framesPerSecond < ac.framesPerSecond)
         XCTAssertTrue(battery.renderScale < ac.renderScale)
+    }
+
+    func testOnlyFastSnowOnPowerRunsAtSixtyFrames() {
+        XCTAssertEqual(SnowRenderConfiguration(settings: .default, power: .pluggedIn).framesPerSecond, 30)
+        XCTAssertEqual(config(.light, .windy).framesPerSecond, 60)
+        XCTAssertEqual(config(.blizzard).framesPerSecond, 60)
+        XCTAssertEqual(config(.blizzard, .windy, .mixed, .pixel).framesPerSecond, 30)
+        XCTAssertEqual(config(.blizzard, .windy, power: .battery).framesPerSecond, 30)
     }
 
     func testCountScalesWithAreaWithinLimits() {

@@ -20,14 +20,18 @@ public struct SnowRenderConfiguration: Equatable, Sendable {
         self.power = power
     }
 
-    /// Snow drifts slowly, so 30 fps reads as smooth; plugged-in Macs get 60.
+    /// Gently drifting snow reads as smooth at 30 fps, and every frame makes the window
+    /// server redraw the whole display — so 60 is kept for fast snow on a plugged-in Mac.
     public var framesPerSecond: Int {
-        // Pixel snow steps across a coarse grid by design; more frames would be wasted.
-        if settings.style == .pixel { return power == .constrained ? 20 : 30 }
         switch power {
-        case .pluggedIn: return 60
-        case .battery: return 30
-        case .constrained: return 24
+        case .pluggedIn:
+            // Pixel snow steps across a coarse grid by design; more frames would be wasted.
+            let isFast = settings.wind == .windy || settings.intensity == .blizzard
+            return isFast && settings.style != .pixel ? 60 : 30
+        case .battery:
+            return 30
+        case .constrained:
+            return 20
         }
     }
 
