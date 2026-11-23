@@ -7,11 +7,12 @@ Noelify is a native macOS menu bar app (Swift · SwiftUI · AppKit) that transfo
 desktop into a calm, beautiful Christmas world — and puts everything back exactly as it
 was when you switch it off.
 
-> **Status: Phase 1 — Foundation (v0.1.0, development build).**
-> Working today: menu bar app, Control Center, Christmas Mode on/off, consent-gated
-> wallpaper change with safe backup & restore, crash recovery, persistent settings.
-> Snowfall, window snow, lights, decorations and the four final world wallpapers are
-> being built in the next phases (see [Roadmap](#roadmap)). They are **not** in this build.
+> **Status: Phase 2 — Living Snow Engine (v0.2.0, development build).**
+> Working today: everything from Phase 1 (menu bar app, Control Center, Christmas Mode,
+> consent-gated wallpaper change with backup & restore, crash recovery) plus animated
+> snowfall over your apps with intensity, wind, size and style settings.
+> Window snow, lights, decorations and the four final world wallpapers are **not** in
+> this build (see [Roadmap](#roadmap)).
 
 ## Requirements
 
@@ -58,10 +59,18 @@ The first time you turn on Christmas Mode, Noelify asks before touching your wal
 See [docs/PLATFORM_LIMITS.md](docs/PLATFORM_LIMITS.md) for cases macOS doesn't let us
 restore perfectly (Spaces, Aerial/Shuffle wallpapers).
 
+## Snow
+
+Turn on Christmas Mode and choose **Intensity** (Off · Light · Medium · Heavy · Blizzard),
+**Wind** (Calm · Breeze · Windy), **Size** (Small · Mixed · Large) and **Style**
+(Realistic · Soft · Magical · Pixel). Settings are saved. The snow never takes clicks or
+keyboard focus, uses fewer flakes on battery, and is released completely when it's off.
+Measurements: [docs/TESTING.md](docs/TESTING.md#performance).
+
 ## Privacy
 
 No telemetry, no analytics, no network requests, no trackers, no login items, no admin
-rights. Phase 1 needs **no special permissions**. Details: [docs/PRIVACY.md](docs/PRIVACY.md).
+rights. Noelify needs **no special permissions** so far. Details: [docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## Project layout
 
@@ -70,25 +79,27 @@ Package.swift                 Swift package (open in Xcode)
 Sources/NoelifyCore/          Platform-independent logic (Foundation only, unit-tested)
   Settings/                   Worlds, settings model & persistence
   Wallpaper/                  Backup/restore engine
+  Snow/                       Snow settings, power budget, simulation, effect module
   ChristmasMode/              Coordinator + EffectModule protocol for future engines
 Sources/Noelify/              macOS app (SwiftUI + AppKit)
   App/                        Entry point, AppDelegate, AppModel
   UI/                         Control Center, components, design tokens
+  SnowEngine/                 SpriteKit scene, generated textures, overlay windows
   WallpaperManager/           NSWorkspace backend, bundled wallpaper installer
 Tests/NoelifyCoreTests/       XCTest suite
 Resources/Wallpapers/         Bundled wallpapers (offline)
 Support/Info.plist            App bundle metadata (LSUIElement menu bar app)
 scripts/build-app.sh          Assembles + ad-hoc signs Noelify.app
 scripts/wallpapers/           Procedural wallpaper generators (dev tools, Python)
-docs/                         Architecture, privacy, platform limits
+docs/                         Architecture, privacy, platform limits, testing & performance
 ```
 
 ## Roadmap
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 Foundation | Menu bar app, Control Center, Christmas Mode, Wallpaper Manager | ✅ code complete — awaiting verification on a real Mac |
-| 2 Snow Engine | Click-through overlay, SpriteKit snow, intensity/wind/size/style | ⏳ |
+| 1 Foundation | Menu bar app, Control Center, Christmas Mode, Wallpaper Manager | ✅ runs on a real Mac |
+| 2 Snow Engine | Click-through overlay, SpriteKit snow, intensity/wind/size/style | ✅ built and tested — see [docs/TESTING.md](docs/TESTING.md) for what still needs a human eye |
 | 3 Christmas Worlds | Four final wallpapers, theme effects, transitions | ⏳ |
 | 4 Living Desktop | Window snow, lights, snowman, Santa, shooting stars | ⏳ |
 | 5 Premium | Onboarding, presets, ambient sound, multi-monitor, battery saver | ⏳ |

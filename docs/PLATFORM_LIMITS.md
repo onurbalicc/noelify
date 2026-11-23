@@ -15,7 +15,21 @@ does about it. Items marked *unverified* still need testing on real hardware.
 | **Display connected while Christmas Mode is on** | Its current wallpaper is backed up, then the Christmas wallpaper is applied (about 1 s after macOS reports the change). |
 | **Running from Xcode / `swift run`** | No `.app` bundle → no bundled wallpapers. Build with `scripts/build-app.sh`. |
 
-## Not yet applicable (later phases)
+## Snow overlay
 
-Overlay behaviour in fullscreen apps, Stage Manager, Mission Control and multiple Spaces
-is investigated in Phases 2–4 and will be documented here with test results.
+| Situation | What happens |
+|---|---|
+| **Menu bar, Dock, menus, notifications, Control Center** | These stay in front of the snow (they use higher window levels). |
+| **Spaces** | The overlay asks to join every Space. *Needs checking by eye.* |
+| **Mission Control** | The overlay is marked stationary. Whether snow keeps falling over the thumbnails is decided by macOS. *Needs checking by eye.* |
+| **Fullscreen apps** | The overlay may join fullscreen Spaces, so snow can appear over fullscreen video. Apps that take over the display directly (some games) can hide it. *Needs checking by eye.* |
+| **Lock screen, login window, screen saver, password prompts** | macOS draws these above every app; snow isn't shown there. |
+| **Other always-on-top windows** | Share the same level; whichever came forward last is in front. |
+| **Screenshots, recordings, screen sharing** | Include the snow, like any other window. Turn Christmas Mode off first if you don't want it. |
+| **Window server load** | Any full-screen animated overlay makes macOS redraw the whole display every frame. That work shows up under `WindowServer`, not Noelify. Gentle snow is capped at 30 fps for this reason. |
+| **Reduce Motion** | Not consulted yet: snow only starts when you turn it on. |
+| **Multiple displays** | One overlay per display, added and removed as displays change. *Untested on hardware.* |
+
+## Later phases
+
+Stage Manager and window snow are investigated in Phase 4.

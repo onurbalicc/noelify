@@ -11,7 +11,8 @@ import NoelifyCore
 /// Drives the real `AppModel`, module and overlay, but keeps its settings in a separate
 /// preferences domain and never changes the wallpaper. Captures only Noelify's own
 /// drawing, never the screen. Writes `report.txt` and PNGs, then quits
-/// (exit status 1 if a check failed). See docs/TESTING.md.
+/// (exit status 1 if a check failed). Snow appears and disappears repeatedly while it
+/// runs. See docs/TESTING.md.
 @MainActor
 enum Diagnostics {
     static let settingsDomain = "app.noelify.Noelify.diagnostics"

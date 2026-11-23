@@ -31,7 +31,7 @@ delete the folder and plist above.
 | Feature | Permission | Status |
 |---|---|---|
 | Christmas Mode, wallpaper change/restore | None (public `NSWorkspace` API) | Phase 1 |
-| Snowfall overlay | None | Phase 2 |
+| Snowfall overlay | None. Draws its own window; reads no screen or window content. Power source and Low Power Mode are read to save battery. | Phase 2 |
 | Window snow (snow on window tops) | **Accessibility** — requested only when you enable Window Snow, after an explanation. Used solely to read window *frames* (position/size). | Phase 4 |
 | Ambient sounds | None (bundled audio, off by default) | Phase 5 |
 
