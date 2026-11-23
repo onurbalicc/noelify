@@ -30,11 +30,12 @@ final class AppModel: ObservableObject {
 
     private let settingsStore: SettingsStore
     private let provider: BundledWallpaperProvider
+    private let snowHost: MacSnowOverlayHost
     private let coordinator: ChristmasModeCoordinator
     private var screenChangeWork: DispatchWorkItem?
 
     private init() {
-        settingsStore = SettingsStore(store: UserDefaultsStore())
+        settingsStore = SettingsStore(store: UserDefaultsStore(defaults: Diagnostics.settingsDefaults ?? .standard))
         let loaded = settingsStore.load()
         settings = loaded
 
@@ -44,10 +45,12 @@ final class AppModel: ObservableObject {
             store: WallpaperBackupStore(fileURL: AppPaths.wallpaperBackup),
             ownedDirectory: AppPaths.wallpapers
         )
+        snowHost = MacSnowOverlayHost()
+        let snow = SnowEffectModule(host: snowHost, power: Diagnostics.powerOverride ?? MacPowerMonitor())
         coordinator = ChristmasModeCoordinator(
             wallpaperManager: manager,
             wallpaperProvider: provider,
-            modules: [], // Snow, lights and decorations engines join here in later phases.
+            modules: [snow], // Window snow, lights and decorations join here in later phases.
             settings: loaded
         )
 
@@ -66,6 +69,9 @@ final class AppModel: ObservableObject {
     // MARK: - Derived state
 
     var usesPreviewArt: Bool { provider.usesPreviewArt(for: settings.world) }
+
+    /// The overlays currently on screen (read by diagnostics).
+    var snowOverlays: [SnowOverlayWindow] { Array(snowHost.controller.overlays.values) }
 
     // MARK: - Christmas Mode
 
@@ -116,6 +122,10 @@ final class AppModel: ObservableObject {
             return
         }
         mutateSettings { $0.changesWallpaper = enabled }
+    }
+
+    func setSnow<Value>(_ keyPath: WritableKeyPath<SnowSettings, Value>, to value: Value) {
+        mutateSettings { $0.snow[keyPath: keyPath] = value }
     }
 
     // MARK: - Recovery

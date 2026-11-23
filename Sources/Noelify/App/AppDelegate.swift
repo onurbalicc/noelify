@@ -16,6 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { _ in
             Task { @MainActor in AppModel.shared.screensDidChange() }
         }
+
+        Diagnostics.runIfRequested()
     }
 
     /// Quitting always leaves the Mac as we found it: effects stop and the wallpaper is restored.

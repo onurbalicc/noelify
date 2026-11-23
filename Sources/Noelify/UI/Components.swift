@@ -69,6 +69,52 @@ struct ChristmasModeSwitch: View {
     }
 }
 
+/// A labelled row of choices, one of which is selected.
+struct SnowPicker<Option: Identifiable & Equatable>: View {
+    let title: String
+    let options: [Option]
+    let label: KeyPath<Option, String>
+    let selection: Option
+    let onSelect: (Option) -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Palette.mutedText)
+                .frame(width: 46, alignment: .leading)
+            HStack(spacing: 3) {
+                ForEach(options) { option in
+                    let isSelected = option == selection
+                    Button { onSelect(option) } label: {
+                        Text(option[keyPath: label])
+                            .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .padding(.horizontal, 3)
+                            .foregroundStyle(isSelected ? Palette.christmasGold : Palette.snowWhite)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 23)
+                            .background(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(isSelected ? Palette.christmasGold.opacity(0.16) : Color.white.opacity(0.06))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .strokeBorder(isSelected ? Palette.christmasGold.opacity(0.8) : .clear)
+                            )
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(title): \(option[keyPath: label])")
+                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+}
+
 /// A miniature, hand-drawn preview of a Christmas World.
 struct WorldTile: View {
     let world: ChristmasWorld
@@ -88,18 +134,18 @@ struct WorldTile: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Palette.accent(for: world))
                         .shadow(color: Palette.accent(for: world).opacity(0.8), radius: 6)
-                        .padding(.leading, 10)
+                        .padding(.leading, 8)
                         .padding(.bottom, 12)
                 }
-                .frame(height: 58)
+                .frame(height: 52)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
                 Text(world.shortName)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Palette.snowWhite)
-                    .padding(.leading, 2)
+                    .frame(maxWidth: .infinity)
             }
-            .padding(6)
+            .padding(5)
             .background(
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .fill(isSelected ? Palette.christmasGold.opacity(0.14) : Color.white.opacity(0.04))

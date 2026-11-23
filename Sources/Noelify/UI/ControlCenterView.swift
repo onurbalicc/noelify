@@ -17,6 +17,8 @@ struct ControlCenterView: View {
             christmasModeCard
             if model.isAskingWallpaperConsent { consentCard }
             worldSection
+            // The consent card needs the room; snow settings return once it's answered.
+            if !model.isAskingWallpaperConsent { snowSection }
             wallpaperSection
             roadmapNote
             footer
@@ -102,7 +104,8 @@ struct ControlCenterView: View {
     private var worldSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionLabel(title: "Christmas World")
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+            // One row keeps the whole panel on screen at a MacBook Air's larger text sizes.
+            HStack(spacing: 6) {
                 ForEach(ChristmasWorld.allCases) { world in
                     WorldTile(world: world, isSelected: model.settings.world == world) {
                         model.selectWorld(world)
@@ -112,6 +115,26 @@ struct ControlCenterView: View {
             Text(model.settings.world.tagline)
                 .font(.system(size: 11))
                 .foregroundStyle(Palette.mutedText)
+        }
+    }
+
+    private var snowSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(title: "Snow")
+            Card {
+                SnowPicker(title: "Intensity", options: SnowIntensity.allCases, label: \.displayName,
+                           selection: model.settings.snow.intensity) { model.setSnow(\.intensity, to: $0) }
+                Group {
+                    SnowPicker(title: "Wind", options: SnowWind.allCases, label: \.displayName,
+                               selection: model.settings.snow.wind) { model.setSnow(\.wind, to: $0) }
+                    SnowPicker(title: "Size", options: SnowSize.allCases, label: \.displayName,
+                               selection: model.settings.snow.size) { model.setSnow(\.size, to: $0) }
+                    SnowPicker(title: "Style", options: SnowStyle.allCases, label: \.displayName,
+                               selection: model.settings.snow.style) { model.setSnow(\.style, to: $0) }
+                }
+                .disabled(model.settings.snow.intensity == .off)
+                .opacity(model.settings.snow.intensity == .off ? 0.45 : 1)
+            }
         }
     }
 
@@ -158,7 +181,7 @@ struct ControlCenterView: View {
             Image(systemName: "sparkles")
                 .foregroundStyle(Palette.christmasGold.opacity(0.8))
                 .font(.system(size: 11))
-            Text("Snowfall, window snow, lights and decorations arrive in the next builds.")
+            Text("Window snow, lights and decorations arrive in the next builds.")
                 .font(.system(size: 10))
                 .foregroundStyle(Palette.mutedText)
                 .fixedSize(horizontal: false, vertical: true)
