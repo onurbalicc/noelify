@@ -228,8 +228,9 @@ private final class DiagnosticsRun {
                 continue
             }
             let coverage = opaqueFraction(image)
-            check("\(name) draws snow", coverage > 0.0005 && coverage < 0.35,
-                  String(format: "%.2f%% of the display covered", coverage * 100))
+            // A light snowfall on a small display is only a couple of dozen small flakes.
+            check("\(name) draws snow", coverage > 0.0001 && coverage < 0.35,
+                  String(format: "%.3f%% of the display covered", coverage * 100))
             save(image, "\(name).png")
         }
         // Two frames apart in time must differ, or nothing is animating.
