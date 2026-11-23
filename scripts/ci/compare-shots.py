@@ -1,6 +1,6 @@
-"""Checks that snow reaches the composited screen, moves, and leaves nothing behind.
+"""Checks that snow reaches the composited screen, moves, never flashes, and leaves nothing behind.
 
-Reads snow1/snow2/quiet1/quiet2.bmp (uncompressed, from `screencapture -t bmp`).
+Reads before/burst*/snow1/snow2/quiet1/quiet2.bmp (uncompressed, from `screencapture -t bmp`).
 """
 import pathlib
 import struct
@@ -14,7 +14,6 @@ def pixels(name):
     offset = struct.unpack_from("<I", data, 10)[0]
     width, height = struct.unpack_from("<ii", data, 18)
     bits = struct.unpack_from("<H", data, 28)[0]
-    print(f"{name}: {width}x{height}, {bits} bit")
     return data[offset:], bits // 8
 
 
@@ -32,3 +31,11 @@ still = changed_fraction("quiet1", "quiet2")
 print(f"changed within one second: with snow {moving:.4%}, after quitting {still:.4%}")
 if moving < 0.0005 or moving < still * 3:
     sys.exit("snow does not appear to be moving on the composited screen")
+
+# Snow only ever touches a few percent of the screen. A flash changes most of it.
+worst, name = max(
+    (changed_fraction("before", shot.stem), shot.stem) for shot in sorted(folder.glob("burst*.bmp"))
+)
+print(f"largest change during on/off cycles: {worst:.2%} ({name})")
+if worst > 0.25:
+    sys.exit("the screen flashed while snow was turned on and off")

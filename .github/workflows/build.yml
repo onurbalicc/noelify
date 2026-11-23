@@ -44,10 +44,13 @@ jobs:
         run: |
           build/Noelify.app/Contents/MacOS/Noelify --snow-diagnostics "$RUNNER_TEMP/snow" --checks-only --power battery &
           PID=$!
-          # Let the overlay settle, then record what the window server really composites:
-          # two shots a second apart with snow, two after Noelify has quit.
-          sleep 14
+          # Record what the window server really composites: a burst across the rapid
+          # on/off cycles (looking for flashes), two shots a second apart with steady
+          # snow, and two after Noelify has quit.
           shot() { screencapture -x -t bmp "$RUNNER_TEMP/$1.bmp"; }
+          shot before
+          for i in $(seq 100 220); do shot "burst$i"; done
+          # The snow variants run for another minute from here.
           shot snow1; sleep 1; shot snow2
           for _ in $(seq 120); do kill -0 "$PID" 2>/dev/null || break; sleep 1; done
           if kill -0 "$PID" 2>/dev/null; then echo "timed out"; kill "$PID"; exit 1; fi
