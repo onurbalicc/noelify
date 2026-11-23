@@ -11,21 +11,25 @@ public struct NoelifySettings: Codable, Equatable, Sendable {
     public var changesWallpaper: Bool
     /// The user has explicitly agreed (once) that Noelify may change the wallpaper.
     public var hasConsentedToWallpaperChange: Bool
+    /// Snowfall preferences.
+    public var snow: SnowSettings
 
     public init(
         world: ChristmasWorld = .village,
         changesWallpaper: Bool = true,
-        hasConsentedToWallpaperChange: Bool = false
+        hasConsentedToWallpaperChange: Bool = false,
+        snow: SnowSettings = .default
     ) {
         self.world = world
         self.changesWallpaper = changesWallpaper
         self.hasConsentedToWallpaperChange = hasConsentedToWallpaperChange
+        self.snow = snow
     }
 
     public static let `default` = NoelifySettings()
 
     private enum CodingKeys: String, CodingKey {
-        case world, changesWallpaper, hasConsentedToWallpaperChange
+        case world, changesWallpaper, hasConsentedToWallpaperChange, snow
     }
 
     public init(from decoder: Decoder) throws {
@@ -36,5 +40,6 @@ public struct NoelifySettings: Codable, Equatable, Sendable {
         changesWallpaper = try c.decodeIfPresent(Bool.self, forKey: .changesWallpaper) ?? d.changesWallpaper
         hasConsentedToWallpaperChange = try c.decodeIfPresent(Bool.self, forKey: .hasConsentedToWallpaperChange)
             ?? d.hasConsentedToWallpaperChange
+        snow = (try? c.decodeIfPresent(SnowSettings.self, forKey: .snow)) ?? d.snow
     }
 }
