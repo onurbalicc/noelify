@@ -1,0 +1,49 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS app build + tests
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+      - name: Unit tests
+        run: swift test
+      - name: Build Noelify.app
+        run: scripts/build-app.sh
+      - name: Inspect bundle
+        run: |
+          plutil -lint build/Noelify.app/Contents/Info.plist
+          file build/Noelify.app/Contents/MacOS/Noelify
+          ls -la build/Noelify.app/Contents/Resources/Wallpapers
+      - name: Launch smoke test
+        run: |
+          # Starts the menu bar app headlessly for a few seconds and checks it stays alive.
+          build/Noelify.app/Contents/MacOS/Noelify &
+          PID=$!
+          sleep 6
+          if kill -0 "$PID" 2>/dev/null; then
+            echo "Noelify is running (pid $PID)"
+            kill "$PID"
+          else
+            wait "$PID"; echo "Noelify exited early with status $?"; exit 1
+          fi
+      - name: Zip app (preserves bundle structure and signature)
+        run: ditto -c -k --keepParent build/Noelify.app build/Noelify.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Noelify-app
+          path: build/Noelify.zip
+          retention-days: 7
